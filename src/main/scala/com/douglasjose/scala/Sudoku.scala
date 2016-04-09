@@ -185,7 +185,7 @@ object Solver {
   }
 
   /**
-   * Verifies the game's invariant
+   * Verifies the game's invariants
    * @param board Game to be checked
    */
   def verify(board: Board): Unit = {
@@ -227,57 +227,6 @@ object Solver {
       checkColumn(i)
       checkSquare(i)
     }
-  }
-
-}
-
-object Game {
-
-  def main(args: Array[String]): Unit = {
-
-    val game = Sudoku.init(
-      List(
-        (0, 4, 5),
-        (0, 5, 1),
-        (0, 6, 3),
-        (1, 1, 1),
-        (1, 3, 9),
-        (1, 6, 5),
-        (1, 7, 8),
-        (2, 2, 9),
-        (2, 4, 4),
-        (2, 6, 2),
-        (2, 7, 1),
-        (3, 0, 5),
-        (3, 4, 8),
-        (3, 5, 9),
-        (3, 6, 1),
-        (4, 0, 7),
-        (4, 1, 3),
-        (4, 7, 4),
-        (4, 8, 5),
-        (5, 2, 1),
-        (5, 3, 4),
-        (5, 4, 7),
-        (5, 8, 3),
-        (6, 1, 2),
-        (6, 2, 6),
-        (6, 4, 3),
-        (6, 6, 4),
-        (7, 1, 9),
-        (7, 2, 5),
-        (7, 5, 6),
-        (7, 7, 3),
-        (8, 2, 3),
-        (8, 3, 1),
-        (8, 4, 9)
-      )
-    )
-
-    Solver.solve(game)
-
-    Solver.verify(game)
-
   }
 
 }
