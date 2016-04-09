@@ -9,9 +9,9 @@ object Sudoku {
 
   def init(positions: Seq[(Int, Int, Int)]): Board = {
     val board = new Board
-    positions.foreach{ case (i, j, k) => {
+    positions.foreach{ case (i, j, k) =>
       board(i,j,k)
-    }}
+    }
     board
   }
 
@@ -25,7 +25,7 @@ class Board {
 
   import Board._
 
-  // Board of known values; the value 0 means the answer is not known for that position
+  // Board of known values; the value 0 means the answer is unknown for that position
   private val state: Array[Array[Int]] = Array.fill(size, size){ 0 }
 
   // Sets a value in a specific board position
@@ -46,13 +46,13 @@ class Board {
   def values(): Seq[(Int, Int, Int)] = {
     val ret = mutable.MutableList[(Int, Int, Int)]()
 
-    for (i <- 0 to size - 1; j <- 0 to size -1) {
+    for (i <- 0 until size; j <- 0 until size) {
       if (apply(i, j) != 0) {
         ret += ((i, j, apply(i, j)))
       }
     }
 
-    ret.toSeq
+    ret
   }
 
   /**
@@ -101,12 +101,12 @@ object Solver {
   private def iterate(board: Board): Values = {
     val eligibleValues = allValues()
 
-    board.values().foreach{ case (i, j, k) => {
+    board.values().foreach{ case (i, j, k) =>
       eligibleValues(i)(j).clear()
       invalidateInRow(eligibleValues, i, k)
       invalidateInColumn(eligibleValues, j, k)
       invalidateInSquare(eligibleValues, i, j, k)
-    }}
+    }
 
     eligibleValues
 
@@ -121,7 +121,7 @@ object Solver {
     val ret = mutable.MutableList[(Int, Int, Int)]()
     val values = iterate(board)
 
-    for (i <- 0 to size - 1; j <- 0 to size - 1) {
+    for (i <- 0 until size; j <- 0 until size) {
       val solutions = values(i)(j)
       if (solutions.size == 1) {
         ret += ((i, j, values(i)(j).head))
@@ -155,7 +155,7 @@ object Solver {
 
   // Marks the given value as an invalid solution in the whole row
   private def invalidateInRow(values: Values, rowIndex: Int, value: Int): Values = {
-    for (i <- 0 to size - 1) {
+    for (i <- 0 until size) {
       values(rowIndex)(i) -= value
     }
     values
@@ -163,7 +163,7 @@ object Solver {
 
   // Marks the given value as an invalid solution in the whole column
   private def invalidateInColumn(values: Values, columnIndex: Int, value: Int): Values = {
-    for (i <- 0 to size - 1) {
+    for (i <- 0 until size) {
       values(i)(columnIndex) -= value
     }
     values
@@ -181,7 +181,7 @@ object Solver {
   def squareIndexes(i: Int): List[Int] = {
     val squareSize = Math.sqrt(size).toInt
     val range = i / squareSize
-    (range * squareSize to ((range + 1) * squareSize) - 1).toList
+    (range * squareSize until (range + 1) * squareSize).toList
   }
 
   /**
@@ -193,14 +193,14 @@ object Solver {
     val referenceList = 1 to size
 
     def checkRow(row: Int): Unit = {
-      val rowValues = for (i <- 0 to size - 1) yield board(row, i)
+      val rowValues = for (i <- 0 until size) yield board(row, i)
       if (!referenceList.forall(rowValues.contains)) {
         throw new IllegalStateException(s"Invalid row $row: $rowValues")
       }
     }
 
     def checkColumn(column: Int): Unit = {
-      val columnValues = for (i <- 0 to size - 1) yield board(i, column)
+      val columnValues = for (i <- 0 until size) yield board(i, column)
       if (!referenceList.forall(columnValues.contains)) {
         throw new IllegalStateException(s"Invalid column $column: $columnValues")
       }
@@ -208,7 +208,7 @@ object Solver {
 
     def checkSquare(square: Int): Unit = {
       val numSquares = Math.sqrt(size).toInt
-      for (i <- 0 to numSquares - 1 ; j <- 0 to numSquares - 1) {
+      for (i <- 0 until numSquares; j <- 0 until numSquares) {
         val squareValues= for (r <- squareIndexes(i * numSquares) ; c <- squareIndexes(j * numSquares)) yield board(r,c)
         if (!referenceList.forall(squareValues.contains)) {
           throw new IllegalStateException(s"Invalid square $square: $squareValues")
@@ -222,7 +222,7 @@ object Solver {
       throw new IllegalStateException("The game is not yet completely solved")
     }
 
-    for (i <- 0 to size -1) {
+    for (i <- 0 until size) {
       checkRow(i)
       checkColumn(i)
       checkSquare(i)
