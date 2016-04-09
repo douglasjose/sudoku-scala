@@ -3,14 +3,14 @@ package com.douglasjose.scala
 import scala.collection.mutable
 
 /**
- * @author Douglas José (@douglasjose)
- */
+  * @author Douglas José (@douglasjose)
+  */
 object Sudoku {
 
   def init(positions: Seq[(Int, Int, Int)]): Board = {
     val board = new Board
-    positions.foreach{ case (i, j, k) =>
-      board(i,j,k)
+    positions.foreach { case (i, j, k) =>
+      board(i, j, k)
     }
     board
   }
@@ -26,10 +26,12 @@ class Board {
   import Board._
 
   // Board of known values; the value 0 means the answer is unknown for that position
-  private val state: Array[Array[Int]] = Array.fill(size, size){ 0 }
+  private val state: Array[Array[Int]] = Array.fill(size, size) {
+    0
+  }
 
   // Sets a value in a specific board position
-  def apply(i: Int, j: Int, k:Int): Unit = {
+  def apply(i: Int, j: Int, k: Int): Unit = {
     state(i)(j) = k
   }
 
@@ -40,9 +42,10 @@ class Board {
 
 
   /**
-   * Sequence of tuples of known values in the board
-   * @return Sequence of row/column/value for known values
-   */
+    * Sequence of tuples of known values in the board
+    *
+    * @return Sequence of row/column/value for known values
+    */
   def values(): Seq[(Int, Int, Int)] = {
     val ret = mutable.MutableList[(Int, Int, Int)]()
 
@@ -56,22 +59,23 @@ class Board {
   }
 
   /**
-   * @return If there are no undetermined values in the board
-   */
-  def gameSolved(): Boolean = !state.exists(row => row.contains(0))
+    * @return If there are no undetermined values in the board
+    */
+  def gameSolved(): Boolean = !state.exists(_.contains(0))
 
   /**
-   * Prints the state of the game board
-   */
+    * Prints the state of the game board
+    */
   def display(): Unit = {
     state.foreach(row => {
-      row.foreach(v => print(v))
+      row.foreach {
+        print
+      }
       println()
     })
   }
 
 }
-
 
 
 object Solver {
@@ -81,10 +85,11 @@ object Solver {
   type Values = Array[Array[mutable.BitSet]]
 
   /**
-   * Returns a 'cube' of all possible values a board position can have
-   * @return Matrix of BitSet where the set has all values a position can have
-   */
-  def allValues(): Values = Array.fill(size, size){
+    * Returns a 'cube' of all possible values a board position can have
+    *
+    * @return Matrix of BitSet where the set has all values a position can have
+    */
+  def allValues(): Values = Array.fill(size, size) {
     val bs = new mutable.BitSet(size)
     for (i <- 1 to size) {
       bs.+=(i)
@@ -94,18 +99,19 @@ object Solver {
 
 
   /**
-   * Calculates the possible values for all positions in the board, based on the already know solutions
-   * @param board Current game board
-   * @return Values 'cube' containing only the possible values given the board configuration
-   */
+    * Calculates the possible values for all positions in the board, based on the already know solutions
+    *
+    * @param board Current game board
+    * @return Values 'cube' containing only the possible values given the board configuration
+    */
   private def iterate(board: Board): Values = {
     val eligibleValues = allValues()
 
-    board.values().foreach{ case (i, j, k) =>
+    board.values().foreach { case (i, j, k) =>
       eligibleValues(i)(j).clear()
       invalidateInRow(eligibleValues, i, k)
       invalidateInColumn(eligibleValues, j, k)
-      invalidateInSquare(eligibleValues, i, j, k)
+      invalidateInSector(eligibleValues, i, j, k)
     }
 
     eligibleValues
@@ -113,10 +119,11 @@ object Solver {
   }
 
   /**
-   * Returns a sequence of tuples where only one value is possible in a position, making it a solution
-   * @param board Current game configuration
-   * @return Sequence of solutions found
-   */
+    * Returns a sequence of tuples where only one value is possible in a position, making it a solution
+    *
+    * @param board Current game configuration
+    * @return Sequence of solutions found
+    */
   private def findSolutions(board: Board): Seq[(Int, Int, Int)] = {
     val ret = mutable.MutableList[(Int, Int, Int)]()
     val values = iterate(board)
@@ -131,10 +138,10 @@ object Solver {
   }
 
   /**
-   * Solves the Sudoku game.
-   *
-   * @param board Game to be solved
-   */
+    * Solves the Sudoku game.
+    *
+    * @param board Game to be solved
+    */
   def solve(board: Board): Unit = {
     var iteration = 0
     while (!board.gameSolved()) {
@@ -144,9 +151,9 @@ object Solver {
         board.display()
         throw new IllegalStateException(s"No more solutions could be found after $iteration iterations")
       }
-      solutions.foreach{ case (i,j,v) =>
+      solutions.foreach { case (i, j, v) =>
         println(s"Iteration $iteration: found solution ($i,$j) = $v")
-        board(i,j,v)
+        board(i, j, v)
       }
     }
     board.display()
@@ -169,25 +176,26 @@ object Solver {
     values
   }
 
-  // Marks the given value as an invalid solution in the whole square
-  private def invalidateInSquare(values: Values, row: Int, column: Int, value: Int): Values = {
-    for (i <- squareIndexes(row) ; j <- squareIndexes(column)) {
+  // Marks the given value as an invalid solution in the whole sector
+  private def invalidateInSector(values: Values, row: Int, column: Int, value: Int): Values = {
+    for (i <- sectorIndexes(row); j <- sectorIndexes(column)) {
       values(i)(j) -= value
     }
     values
   }
 
 
-  def squareIndexes(i: Int): List[Int] = {
-    val squareSize = Math.sqrt(size).toInt
-    val range = i / squareSize
-    (range * squareSize until (range + 1) * squareSize).toList
+  def sectorIndexes(i: Int): List[Int] = {
+    val sectorSize = Math.sqrt(size).toInt
+    val range = i / sectorSize
+    (range * sectorSize until (range + 1) * sectorSize).toList
   }
 
   /**
-   * Verifies the game's invariants
-   * @param board Game to be checked
-   */
+    * Verifies the game's invariants
+    *
+    * @param board Game to be checked
+    */
   def verify(board: Board): Unit = {
 
     val referenceList = 1 to size
@@ -206,10 +214,10 @@ object Solver {
       }
     }
 
-    def checkSquare(square: Int): Unit = {
-      val numSquares = Math.sqrt(size).toInt
-      for (i <- 0 until numSquares; j <- 0 until numSquares) {
-        val squareValues= for (r <- squareIndexes(i * numSquares) ; c <- squareIndexes(j * numSquares)) yield board(r,c)
+    def checkSector(square: Int): Unit = {
+      val numSectors = Math.sqrt(size).toInt
+      for (i <- 0 until numSectors; j <- 0 until numSectors) {
+        val squareValues = for (r <- sectorIndexes(i * numSectors); c <- sectorIndexes(j * numSectors)) yield board(r, c)
         if (!referenceList.forall(squareValues.contains)) {
           throw new IllegalStateException(s"Invalid square $square: $squareValues")
         }
@@ -225,7 +233,7 @@ object Solver {
     for (i <- 0 until size) {
       checkRow(i)
       checkColumn(i)
-      checkSquare(i)
+      checkSector(i)
     }
   }
 

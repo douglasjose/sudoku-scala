@@ -9,15 +9,15 @@ class SudokuSuite extends FunSuite {
 
   test("Utility functions") {
 
-    assert(Solver.squareIndexes(0) == List(0, 1, 2))
-    assert(Solver.squareIndexes(1) == List(0, 1, 2))
-    assert(Solver.squareIndexes(2) == List(0, 1, 2))
-    assert(Solver.squareIndexes(3) == List(3, 4, 5))
-    assert(Solver.squareIndexes(4) == List(3, 4, 5))
-    assert(Solver.squareIndexes(5) == List(3, 4, 5))
-    assert(Solver.squareIndexes(6) == List(6, 7, 8))
-    assert(Solver.squareIndexes(7) == List(6, 7, 8))
-    assert(Solver.squareIndexes(8) == List(6, 7, 8))
+    assert(Solver.sectorIndexes(0) == List(0, 1, 2))
+    assert(Solver.sectorIndexes(1) == List(0, 1, 2))
+    assert(Solver.sectorIndexes(2) == List(0, 1, 2))
+    assert(Solver.sectorIndexes(3) == List(3, 4, 5))
+    assert(Solver.sectorIndexes(4) == List(3, 4, 5))
+    assert(Solver.sectorIndexes(5) == List(3, 4, 5))
+    assert(Solver.sectorIndexes(6) == List(6, 7, 8))
+    assert(Solver.sectorIndexes(7) == List(6, 7, 8))
+    assert(Solver.sectorIndexes(8) == List(6, 7, 8))
 
   }
 
