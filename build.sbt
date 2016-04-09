@@ -1,3 +1,5 @@
+scalaVersion := "2.11.8"
+
 scalacOptions += "-target:jvm-1.7"
 
 libraryDependencies += "org.slf4j" % "slf4j-api" % "1.7.12"
