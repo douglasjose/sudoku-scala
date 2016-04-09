@@ -28,8 +28,9 @@ val sdk = Sudoku.init(List(
 ))
 
 
-//val sol = Solver.solve(sdk)
+val sol = Solver.solve(sdk)
 
+sdk.display()
 
 val sdk2 = Sudoku.init(List(
   (0,0,1),
