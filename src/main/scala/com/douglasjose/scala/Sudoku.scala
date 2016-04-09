@@ -24,6 +24,7 @@ object Board {
 
   /**
     * List of coordinates of the first (top left) position in each sector of the board
+    * E.g., if boardSize = 9, then sectorHeads = List((0,0), (0,3), (0,6), (3,0), (3,3), (3,6), (6,0), (6,3), (6,6))
     */
   val sectorHeads: List[(Int, Int)] = {
     val heads = for (
@@ -151,68 +152,52 @@ object Solver {
     ret
   }
 
+  /**
+    * Look for solutions where a value can be accommodated in a single position in their corresponding line/row/sector
+    *
+    * @param board Sudoku board
+    * @return Sequence of solutions found using this strategy
+    */
   private def findAdvancedSolutions(board: Board): Seq[(Int, Int, Int)] = {
-    println("Looking for advanced solutions")
     val eligibleValues = iterate(board)
-    val eligibleInSector = eligibleBySector(eligibleValues)
-    eligibleInSector.foreach(e => {
-      println("Sector " + e._1)
-      //printValues(e._2)
-      uniqueValueInSector(e._2).foreach(u => {
-        val coordinates = (e._1._1 + u._1._1, e._1._2 + u._1._2)
-        println(s"Position $coordinates can only accept value ${u._2}")
-      })
-    })
 
-    eligibleInSector.flatMap(e => {
+    // List of pairs ('sector head', 'eligible values in sector')
+    val eligibleSectors: List[((Int, Int), Values)] =
+      sectorHeads.map(h => (h, eligibleValues.map(_.slice(h._2, h._2 + sectorSize)).slice(h._1, h._1 + sectorSize)))
+
+    // TODO Search for unique values in rows and columns as well
+    eligibleSectors.flatMap(e => {
       uniqueValueInSector(e._2).map(u => (e._1._1 + u._1._1, e._1._2 + u._1._2, u._2))
     })
   }
 
-
-  private def eligibleBySector(eligible: Values) = {
-    Board.sectorHeads.map(h => (h, eligibleInSector(eligible, h._1, h._2)))
-  }
-
-  private def eligibleInSector(eligible: Values, i: Int, j:Int): Values = {
-    eligible.map(_.slice(j, j + sectorSize)).slice(i, i + sectorSize)
-  }
-
-  private def printValues(values: Values): Unit = {
-    values.indices.foreach(i =>
-      values(i).indices.foreach(j => {
-        val v = values(i)(j)
-        println(s"($i,$j) -> $v")
-      }
-      )
-    )
-  }
-
+  /**
+    * Searches a sector for values that have only one possible position in it.
+    *
+    * @param sector The sector of the board to search for unique values
+    * @return List of positions in the sector and the unique value associated with them
+    */
   private def uniqueValueInSector(sector: Values): List[((Int, Int), Int)] = {
+
     val sectorMap = sectorAsMap(sector)
 
-    /*
-    sectorMap.foreach(s => {
-      s._2.foreach(v => {
+    // A value is unique in a sector if there is no other position in the sector that could accept it
+    def isUniqueInSector(positionToValue: ((Int, Int), Int)): Boolean = {
+      sectorMap.forall(o => positionToValue._1 == o._1 || o._2.isEmpty || !o._2.contains(positionToValue._2))
+    }
 
-        if (sectorMap.forall(o => o == s || o._2.isEmpty || !o._2.contains(v))) {
-          println(s"Value $v can only go in position ${s._1} in this sector")
-        }
-
-      })
-    })
-    */
-
-    val result = sectorMap.flatMap(sec => {
-
-      sec._2.map(n => {
-        (sec._1, n)
-      }).filter(u => sectorMap.forall(o => o._1 == u._1 || o._2.isEmpty || !o._2.contains(u._2)))
-    })
-
-    result.toList
+    // Creating a list of ('position', 'value') for all values unique in the sector
+    sectorMap.flatMap(sec => {
+      sec._2.map((sec._1, _)).filter(isUniqueInSector(_))
+    }).toList
   }
 
+  /**
+    * Converts the bi-dimensional array of bitsets in a map of bitsets indexed by (row, column)
+    *
+    * @param sector Matrix of bitsets
+    * @return Map of bitsets
+    */
   private def sectorAsMap(sector: Values): mutable.Map[(Int, Int), mutable.BitSet] = {
     val result = mutable.Map[(Int, Int), mutable.BitSet]()
 
@@ -236,7 +221,10 @@ object Solver {
       iteration = iteration + 1
       val solutions = findSolutions(board)
       val advancedSolutions = solutions match {
-        case Nil => findAdvancedSolutions(board)
+        case Nil => {
+          println(s"Iteration $iteration: Searching for advanced solutions")
+          findAdvancedSolutions(board)
+        }
         case _ => Nil
       }
       val allSolutions = solutions ++ advancedSolutions
@@ -279,7 +267,6 @@ object Solver {
 
 
   def sectorIndexes(i: Int): List[Int] = {
-    val sectorSize = Math.sqrt(boardSize).toInt
     val range = i / sectorSize
     (range * sectorSize until (range + 1) * sectorSize).toList
   }

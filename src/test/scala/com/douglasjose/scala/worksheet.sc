@@ -1,4 +1,4 @@
-import com.douglasjose.scala.{Solver, Sudoku}
+import com.douglasjose.scala.{Board, Solver, Sudoku}
 
 val sdk = Sudoku.init(List(
   (0,0,8),
@@ -59,4 +59,10 @@ val sdk2 = Sudoku.init(List(
   (8,8,1)
 ))
 
-//val sol2 = Solver.solve(sdk2)
+val sol2 = Solver.solve(sdk2)
+
+sdk2.display()
+
+Board.sectorHeads
+
+
