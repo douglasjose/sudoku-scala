@@ -81,15 +81,14 @@ class Board {
   /**
     * Prints the state of the game board
     */
-  def display(): Unit = {
-    state.foreach(row => {
-      row.foreach {
-        print
-      }
-      println()
-    })
-  }
+  def display() = println(toString)
 
+  override def toString: String = {
+    state.map(row => {
+      row.mkString.grouped(sectorSize).mkString("|")
+    }).grouped(sectorSize).map(_.mkString("\n")).mkString(
+      "\n" + List.fill(sectorSize){"-" * sectorSize}.mkString("+") +  "\n")
+  }
 }
 
 
