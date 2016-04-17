@@ -263,6 +263,7 @@ object Solver {
       val allSolutions = solutions ++ advancedSolutions
       if (allSolutions.isEmpty) {
         board.display()
+        printEligible(board)
         throw new IllegalStateException(s"No more solutions could be found after $iteration iterations")
       }
       allSolutions.foreach { case (i, j, v) =>
@@ -272,6 +273,41 @@ object Solver {
     }
     board.display()
     println(s"Game solved in $iteration iterations.")
+  }
+
+  private def printEligible(board: Board): Unit = {
+    val eligibleValues = iterate(board)
+
+    val eligibleRows: List[(Int, Array[mutable.BitSet])] =
+      (0 until boardSize).map(r => (r, eligibleValues(r))).toList
+
+    eligibleRows.foreach(r => {
+      println(s"Row ${r._1}")
+      r._2.zipWithIndex.foreach{ e => println(s"[${e._2}] = ${e._1}")}
+    })
+
+    val eligibleColumns: List[(Int, Array[mutable.BitSet])] =
+      (0 until boardSize).map(c => (c, eligibleColumn(c, eligibleValues))).toList
+
+    eligibleColumns.foreach(c => {
+      println(s"Column ${c._1}")
+      c._2.zipWithIndex.foreach{ e => println(s"[${e._2}] = ${e._1}")}
+    })
+
+    val eligibleSectors: List[((Int, Int), Values)] =
+      sectorHeads.map(h => (h, eligibleValues.map(_.slice(h._2, h._2 + sectorSize)).slice(h._1, h._1 + sectorSize)))
+
+    eligibleSectors.foreach(s => {
+      println(s"Sector ${s._1}")
+      s._2.zipWithIndex.foreach(r => {
+        r._1.zipWithIndex.foreach(c => {
+          println(s"[${r._2},${c._2}] = ${c._1}")
+        })
+      })
+    })
+
+
+
   }
 
   // Marks the given value as an invalid solution in the whole row
