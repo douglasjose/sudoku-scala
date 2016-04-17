@@ -160,14 +160,33 @@ object Solver {
   private def findAdvancedSolutions(board: Board): Seq[(Int, Int, Int)] = {
     val eligibleValues = iterate(board)
 
+    val eligibleRows: List[(Int, Array[mutable.BitSet])] =
+      (0 until boardSize).map(r => (r, eligibleValues(r))).toList
+
+    val solutionsByRow = eligibleRows.flatMap(e => {
+      uniqueValueInLine(e._2).map(u => (e._1, u._1, u._2))
+    })
+
+    val eligibleColumns: List[(Int, Array[mutable.BitSet])] =
+      (0 until boardSize).map(c => (c, eligibleColumn(c, eligibleValues))).toList
+
+    val solutionsByColumn = eligibleColumns.flatMap(e => {
+      uniqueValueInLine(e._2).map(u => (u._1, e._1, u._2))
+    })
+
     // List of pairs ('sector head', 'eligible values in sector')
     val eligibleSectors: List[((Int, Int), Values)] =
       sectorHeads.map(h => (h, eligibleValues.map(_.slice(h._2, h._2 + sectorSize)).slice(h._1, h._1 + sectorSize)))
 
-    // TODO Search for unique values in rows and columns as well
-    eligibleSectors.flatMap(e => {
+    val solutionsBySector = eligibleSectors.flatMap(e => {
       uniqueValueInSector(e._2).map(u => (e._1._1 + u._1._1, e._1._2 + u._1._2, u._2))
     })
+
+    solutionsBySector ++ solutionsByRow ++ solutionsByColumn
+  }
+
+  def eligibleColumn(col: Int, eligibleBoard: Values): Array[mutable.BitSet] = {
+    eligibleBoard.map(r => r(col))
   }
 
   /**
@@ -189,6 +208,22 @@ object Solver {
     sectorMap.flatMap(sec => {
       sec._2.map((sec._1, _)).filter(isUniqueInSector(_))
     }).toList
+  }
+
+  /**
+    * Searches a row or column for a values that have one possible position in it
+    * @param line The row or column to search for unique values
+    * @return List of positions in the row or column and the unique values associated with them
+    */
+  private def uniqueValueInLine(line: Array[mutable.BitSet]): List[(Int,Int)] = {
+
+    def isUniqueInLine(positionAndValue: (Int, Int), line: Array[mutable.BitSet]) =
+      line.indices.forall(o => o == positionAndValue._1 || !line(o).contains(positionAndValue._2))
+
+    line.indices.flatMap(i => {
+      line(i).map(v=> (i, v)).filter(p => isUniqueInLine(p, line))
+    }).toList
+
   }
 
   /**
@@ -220,10 +255,9 @@ object Solver {
       iteration = iteration + 1
       val solutions = findSolutions(board)
       val advancedSolutions = solutions match {
-        case Nil => {
+        case Nil =>
           println(s"Iteration $iteration: Searching for advanced solutions")
           findAdvancedSolutions(board)
-        }
         case _ => Nil
       }
       val allSolutions = solutions ++ advancedSolutions
