@@ -166,7 +166,7 @@ class SudokuSuite extends FunSuite {
     ))
   }
 
-  ignore("Solver - evil #01") {
+  test("Solver - evil #01") {
     // http://www.websudoku.com/?level=4&set_id=7800629503
     solveAndVerify(Sudoku.init(
       List(

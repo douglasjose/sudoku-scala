@@ -128,7 +128,7 @@ object Solver {
       invalidateInSector(eligibleValues, i, j, k)
     }
 
-    eligibleValues
+    invalidateByPermutations(eligibleValues)
 
   }
 
@@ -156,38 +156,74 @@ object Solver {
     }
   }
 
-  private def reduceEligibles(values: Values): Unit = {
-    values.foreach(r => {
-      val rowEligibles = r.map(_.toList).toList.filter(_.nonEmpty)
-      val simplifiedRowEligibles = reducePermutations(listPermutations(rowEligibles))
+  def invalidateByPermutations(eligibleValues: Values): Values = {
+
+    eligibleValues.indices.foreach(r => {
+      val rowEligibles = eligibleValues(r).zipWithIndex.map(e => (e._2, e._1.toList)).filter(_._2.nonEmpty).toList
+
+      val simplifiedRowEligibles = rowEligibles.map(_._1).zip(
+        reducePermutations(listPermutations(rowEligibles.map(_._2))))
+
       if (rowEligibles != simplifiedRowEligibles) {
-        println(s"Row ${values.indexOf(r)} values $rowEligibles simplifies to $simplifiedRowEligibles")
+        println(s"Row before: ${eligibleValues(r).toList}")
+        simplifiedRowEligibles.foreach(e => {
+          val original = rowEligibles.find(_._1 == e._1).get
+          println(s"[$r,${e._1}] ${original._2} => ${e._2}")
+          eligibleValues(r)(e._1) = mutable.BitSet.empty ++ e._2
+        })
+        println(s"Row after: ${eligibleValues(r).toList}")
       }
+
     })
 
-    for (i <- 0 until boardSize) {
-      val c = eligibleColumn(i, values)
-      val columnEligibles = c.map(_.toList).toList.filter(_.nonEmpty)
-      val simplifiedColumnEligibles = reducePermutations(listPermutations(columnEligibles))
+    for (c <- 0 until boardSize) {
+      val columnEligibles = eligibleColumn(c, eligibleValues).zipWithIndex.map(
+        e => (e._2, e._1.toList)).filter(_._2.nonEmpty).toList
+
+      val simplifiedColumnEligibles = columnEligibles.map(_._1).zip(
+        reducePermutations(listPermutations(columnEligibles.map(_._2))))
+
       if (columnEligibles != simplifiedColumnEligibles) {
-        println(s"Column $i values $columnEligibles simplifies to $simplifiedColumnEligibles")
+        println(s"Column before: ${eligibleColumn(c, eligibleValues).toList}")
+        simplifiedColumnEligibles.foreach(e => {
+          val original = columnEligibles.find(_._1 == e._1).get
+          println(s"[${e._1},$c] ${original._2} => ${e._2}")
+          eligibleValues(e._1)(c) = mutable.BitSet.empty ++ e._2
+        })
+        println(s"Column after: ${eligibleColumn(c, eligibleValues).toList}")
       }
     }
 
-    // List of pairs ('sector head', 'eligible values in sector')
     val eligibleSectors: List[((Int, Int), Values)] =
-      sectorHeads.map(h => (h, values.map(_.slice(h._2, h._2 + sectorSize)).slice(h._1, h._1 + sectorSize)))
+      sectorHeads.map(h => (h, eligibleValues.map(_.slice(h._2, h._2 + sectorSize)).slice(h._1, h._1 + sectorSize)))
 
     eligibleSectors.foreach(s => {
       val sectorMap = sectorAsMap(s._2)
-      val sectorEligibles = sectorMap.values.map(_.toList).toList.filter(_.nonEmpty)
-      val simplifiedSectorEligibles = reducePermutations(listPermutations(sectorEligibles))
+
+      val sectorEligibles = sectorMap.toList.map(e => (e._1, e._2.toList)).filter(_._2.nonEmpty)
+
+      val simplifiedSectorEligibles = sectorEligibles.map(_._1).zip(
+        reducePermutations(listPermutations(sectorEligibles.map(_._2))))
+
       if (sectorEligibles != simplifiedSectorEligibles) {
-        println(s"Sector [${s._1}] values $sectorEligibles simplifies to $simplifiedSectorEligibles")
+        println(s"Sector head: ${s._1}")
+        println(s"Sector before: ${sectorAsMap(s._2).toList}")
+
+        simplifiedSectorEligibles.foreach(e => {
+          val pos = (s._1._1 + e._1._1, s._1._2 + e._1._2)
+          val original = sectorMap(e._1)
+          println(s"[$pos] $original => ${e._2}")
+          eligibleValues(pos._1)(pos._2) = mutable.BitSet.empty ++ e._2
+        })
+
+        println(s"Sector after: ${sectorAsMap(s._2).toList}")
       }
     })
 
+    eligibleValues
   }
+
+
 
 
 
@@ -271,6 +307,7 @@ object Solver {
 
   /**
     * Searches a row or column for a values that have one possible position in it
+    *
     * @param line The row or column to search for unique values
     * @return List of positions in the row or column and the unique values associated with them
     */
@@ -323,7 +360,8 @@ object Solver {
       if (allSolutions.isEmpty) {
         board.display()
         printEligible(board)
-        reduceEligibles(iterate(board))
+        //reduceEligibles(iterate(board))
+        invalidateByPermutations(iterate(board))
         throw new IllegalStateException(s"No more solutions could be found after $iteration iterations")
       }
       allSolutions.foreach { case (i, j, v) =>
