@@ -165,13 +165,9 @@ object Solver {
         reducePermutations(listPermutations(rowEligibles.map(_._2))))
 
       if (rowEligibles != simplifiedRowEligibles) {
-        println(s"Row before: ${eligibleValues(r).toList}")
         simplifiedRowEligibles.foreach(e => {
-          val original = rowEligibles.find(_._1 == e._1).get
-          println(s"[$r,${e._1}] ${original._2} => ${e._2}")
           eligibleValues(r)(e._1) = mutable.BitSet.empty ++ e._2
         })
-        println(s"Row after: ${eligibleValues(r).toList}")
       }
 
     })
@@ -184,13 +180,9 @@ object Solver {
         reducePermutations(listPermutations(columnEligibles.map(_._2))))
 
       if (columnEligibles != simplifiedColumnEligibles) {
-        println(s"Column before: ${eligibleColumn(c, eligibleValues).toList}")
         simplifiedColumnEligibles.foreach(e => {
-          val original = columnEligibles.find(_._1 == e._1).get
-          println(s"[${e._1},$c] ${original._2} => ${e._2}")
           eligibleValues(e._1)(c) = mutable.BitSet.empty ++ e._2
         })
-        println(s"Column after: ${eligibleColumn(c, eligibleValues).toList}")
       }
     }
 
@@ -206,26 +198,16 @@ object Solver {
         reducePermutations(listPermutations(sectorEligibles.map(_._2))))
 
       if (sectorEligibles != simplifiedSectorEligibles) {
-        println(s"Sector head: ${s._1}")
-        println(s"Sector before: ${sectorAsMap(s._2).toList}")
-
         simplifiedSectorEligibles.foreach(e => {
           val pos = (s._1._1 + e._1._1, s._1._2 + e._1._2)
-          val original = sectorMap(e._1)
-          println(s"[$pos] $original => ${e._2}")
           eligibleValues(pos._1)(pos._2) = mutable.BitSet.empty ++ e._2
         })
 
-        println(s"Sector after: ${sectorAsMap(s._2).toList}")
       }
     })
 
     eligibleValues
   }
-
-
-
-
 
   /**
     * Returns a sequence of tuples where only one value is possible in a position, making it a solution
@@ -360,8 +342,6 @@ object Solver {
       if (allSolutions.isEmpty) {
         board.display()
         printEligible(board)
-        //reduceEligibles(iterate(board))
-        invalidateByPermutations(iterate(board))
         throw new IllegalStateException(s"No more solutions could be found after $iteration iterations")
       }
       allSolutions.foreach { case (i, j, v) =>
