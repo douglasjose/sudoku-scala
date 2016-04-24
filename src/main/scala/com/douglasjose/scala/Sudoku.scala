@@ -22,16 +22,17 @@ object Board {
 
   val sectorSize = Math.sqrt(boardSize).toInt
 
+  assert(sectorSize * sectorSize == boardSize)
+
   /**
     * List of coordinates of the first (top left) position in each sector of the board
     * E.g., if boardSize = 9, then sectorHeads = List((0,0), (0,3), (0,6), (3,0), (3,3), (3,6), (6,0), (6,3), (6,6))
     */
   val sectorHeads: List[(Int, Int)] = {
-    val heads = for (
+    (for (
       i <- 0 until sectorSize;
       j <- 0 until sectorSize
-    ) yield (i * sectorSize, j * sectorSize)
-    heads.toList
+    ) yield (i * sectorSize, j * sectorSize)).toList
   }
 
 }
@@ -55,22 +56,13 @@ class Board {
     state(i)(j)
   }
 
-
   /**
     * Sequence of tuples of known values in the board
     *
     * @return Sequence of row/column/value for known values
     */
   def values(): Seq[(Int, Int, Int)] = {
-    val ret = mutable.MutableList[(Int, Int, Int)]()
-
-    for (i <- 0 until boardSize; j <- 0 until boardSize) {
-      if (apply(i, j) != 0) {
-        ret += ((i, j, apply(i, j)))
-      }
-    }
-
-    ret
+    (for (i <- 0 until boardSize; j <- 0 until boardSize) yield (i, j, apply(i, j))).filter(_._3 != 0)
   }
 
   /**
@@ -78,16 +70,13 @@ class Board {
     */
   def gameSolved(): Boolean = !state.exists(_.contains(0))
 
-  /**
-    * Prints the state of the game board
-    */
-  def display() = println(toString)
-
   override def toString: String = {
     state.map(row => {
       row.mkString.grouped(sectorSize).mkString("|")
     }).grouped(sectorSize).map(_.mkString("\n")).mkString(
-      "\n" + List.fill(sectorSize){"-" * sectorSize}.mkString("+") +  "\n")
+      "\n" + List.fill(sectorSize) {
+        "-" * sectorSize
+      }.mkString("+") + "\n")
   }
 }
 
@@ -101,14 +90,10 @@ object Solver {
   /**
     * Returns a 'cube' of all possible values a board position can have
     *
-    * @return Matrix of BitSet where the set has all values a position can have
+    * @return Matrix of BitSet where each entry represents all values a position can have
     */
   def allValues(): Values = Array.fill(boardSize, boardSize) {
-    val bs = new mutable.BitSet(boardSize)
-    for (i <- 1 to boardSize) {
-      bs.+=(i)
-    }
-    bs
+    mutable.BitSet(1 to boardSize:_*)
   }
 
 
@@ -132,15 +117,19 @@ object Solver {
 
   }
 
+  /**
+    * Generates all permutations given a list of possible values in each position, returning only permutations where
+    * each number appears only once
+    *
+    * @param groups List of possible values for each position
+    * @return List of unique permutations
+    */
   private def listPermutations(groups: List[List[Int]]): List[List[Int]] = {
 
     def listPermutationsRec(prefix: List[Int], groups: List[List[Int]]): List[List[Int]] = {
-
-      if (groups.isEmpty) {
-        List(prefix)
-      } else {
-        val nextPrefixes = groups.head.map(prefix ++ List(_))
-        nextPrefixes.flatMap(listPermutationsRec(_, groups.tail))
+      groups match {
+        case Nil => List(prefix)
+        case g :: gs => g.map(prefix ++ List(_)).flatMap(listPermutationsRec(_, gs))
       }
     }
 
@@ -148,17 +137,30 @@ object Solver {
 
   }
 
+  /**
+    * Reduces the list of possible values in a position by comparing them with the values of a list of unique
+    * permutations
+    *
+    * @param permutations List of unique permutations
+    * @return List of possible values in each position constrained by the permutations provided
+    */
   private def reducePermutations(permutations: List[List[Int]]): List[List[Int]] = {
-    if (permutations.isEmpty || permutations.head.isEmpty) {
-      Nil
-    } else {
-      permutations.map(_.head).distinct.sorted :: reducePermutations(permutations.map(_.tail))
+    permutations match {
+      case ps if ps.head.nonEmpty => ps.map(_.head).distinct :: reducePermutations(ps.map(_.tail))
+      case _ => Nil
     }
   }
 
+  /**
+    * Invalidates eligible values if no permutations in a row/column/sector allows a number to occur in a particular
+    * position
+    *
+    * @param eligibleValues List of eligible values in the game
+    * @return List of eligible values after invalidation
+    */
   def invalidateByPermutations(eligibleValues: Values): Values = {
 
-    eligibleValues.indices.foreach(r => {
+    for (r <- 0 until boardSize) {
       val rowEligibles = eligibleValues(r).zipWithIndex.map(e => (e._2, e._1.toList)).filter(_._2.nonEmpty).toList
 
       val simplifiedRowEligibles = rowEligibles.map(_._1).zip(
@@ -166,11 +168,10 @@ object Solver {
 
       if (rowEligibles != simplifiedRowEligibles) {
         simplifiedRowEligibles.foreach(e => {
-          eligibleValues(r)(e._1) = mutable.BitSet.empty ++ e._2
+          eligibleValues(r)(e._1) = mutable.BitSet(e._2: _*)
         })
       }
-
-    })
+    }
 
     for (c <- 0 until boardSize) {
       val columnEligibles = eligibleColumn(c, eligibleValues).zipWithIndex.map(
@@ -181,7 +182,7 @@ object Solver {
 
       if (columnEligibles != simplifiedColumnEligibles) {
         simplifiedColumnEligibles.foreach(e => {
-          eligibleValues(e._1)(c) = mutable.BitSet.empty ++ e._2
+          eligibleValues(e._1)(c) = mutable.BitSet(e._2: _*)
         })
       }
     }
@@ -200,7 +201,7 @@ object Solver {
       if (sectorEligibles != simplifiedSectorEligibles) {
         simplifiedSectorEligibles.foreach(e => {
           val pos = (s._1._1 + e._1._1, s._1._2 + e._1._2)
-          eligibleValues(pos._1)(pos._2) = mutable.BitSet.empty ++ e._2
+          eligibleValues(pos._1)(pos._2) = mutable.BitSet(e._2: _*)
         })
 
       }
@@ -216,16 +217,8 @@ object Solver {
     * @return Sequence of solutions found
     */
   private def findSolutions(board: Board): Seq[(Int, Int, Int)] = {
-    val ret = mutable.MutableList[(Int, Int, Int)]()
     val values = iterate(board)
-
-    for (i <- 0 until boardSize; j <- 0 until boardSize) {
-      val solutions = values(i)(j)
-      if (solutions.size == 1) {
-        ret += ((i, j, values(i)(j).head))
-      }
-    }
-    ret
+    for (i <- 0 until boardSize ; j <- 0 until boardSize ; if values(i)(j).size == 1) yield (i, j, values(i)(j).head)
   }
 
   /**
@@ -293,33 +286,26 @@ object Solver {
     * @param line The row or column to search for unique values
     * @return List of positions in the row or column and the unique values associated with them
     */
-  private def uniqueValueInLine(line: Array[mutable.BitSet]): List[(Int,Int)] = {
+  private def uniqueValueInLine(line: Array[mutable.BitSet]): List[(Int, Int)] = {
 
     def isUniqueInLine(positionAndValue: (Int, Int), line: Array[mutable.BitSet]) =
       line.indices.forall(o => o == positionAndValue._1 || !line(o).contains(positionAndValue._2))
 
     line.indices.flatMap(i => {
-      line(i).map(v=> (i, v)).filter(p => isUniqueInLine(p, line))
+      line(i).map(v => (i, v)).filter(p => isUniqueInLine(p, line))
     }).toList
 
   }
 
   /**
-    * Converts the bi-dimensional array of bitsets in a map of bitsets indexed by (row, column)
+    * Converts the bi-dimensional array of BitSets in a map of BitSets indexed by (row, column)
     *
     * @param sector Matrix of bitsets
     * @return Map of bitsets
     */
-  private def sectorAsMap(sector: Values): mutable.Map[(Int, Int), mutable.BitSet] = {
-    val result = mutable.Map[(Int, Int), mutable.BitSet]()
-
-    sector.indices.foreach(i =>
-      sector(i).indices.foreach(j =>
-        result += ((i, j) -> sector(i)(j))
-      )
-    )
-
-    result
+  private def sectorAsMap(sector: Values): Map[(Int, Int), mutable.BitSet] = {
+    val entries = for (i <- sector.indices ; j <- sector(i).indices) yield (i, j) -> sector(i)(j)
+    Map(entries:_*)
   }
 
   /**
@@ -340,7 +326,7 @@ object Solver {
       }
       val allSolutions = solutions ++ advancedSolutions
       if (allSolutions.isEmpty) {
-        board.display()
+        println(board)
         printEligible(board)
         throw new IllegalStateException(s"No more solutions could be found after $iteration iterations")
       }
@@ -349,7 +335,7 @@ object Solver {
         board(i, j, v)
       }
     }
-    board.display()
+    println(board)
     println(s"Game solved in $iteration iterations.")
   }
 
@@ -361,7 +347,7 @@ object Solver {
 
     eligibleRows.foreach(r => {
       println(s"Row ${r._1}")
-      r._2.zipWithIndex.foreach{ e => println(s"[${e._2}] = ${e._1}")}
+      r._2.zipWithIndex.foreach { e => println(s"[${e._2}] = ${e._1}") }
     })
 
     val eligibleColumns: List[(Int, Array[mutable.BitSet])] =
@@ -369,7 +355,7 @@ object Solver {
 
     eligibleColumns.foreach(c => {
       println(s"Column ${c._1}")
-      c._2.zipWithIndex.foreach{ e => println(s"[${e._2}] = ${e._1}")}
+      c._2.zipWithIndex.foreach { e => println(s"[${e._2}] = ${e._1}") }
     })
 
     val eligibleSectors: List[((Int, Int), Values)] =
@@ -383,8 +369,6 @@ object Solver {
         })
       })
     })
-
-
 
   }
 
@@ -441,17 +425,15 @@ object Solver {
       }
     }
 
-    def checkSector(square: Int): Unit = {
-      val numSectors = Math.sqrt(boardSize).toInt
-      for (i <- 0 until numSectors; j <- 0 until numSectors) {
-        val squareValues = for (r <- sectorIndexes(i * numSectors); c <- sectorIndexes(j * numSectors)) yield board(r, c)
-        if (!referenceList.forall(squareValues.contains)) {
-          throw new IllegalStateException(s"Invalid square $square: $squareValues")
+    def checkSectors(): Unit = {
+      for (h <- sectorHeads) {
+        val sectorValues = for (r <- h._1 until h._1 + sectorSize ; c <- h._2 until h._2 + sectorSize) yield board(r, c)
+        if (!referenceList.forall(sectorValues.contains)) {
+          throw new IllegalStateException(s"Invalid sector $h: $sectorValues")
         }
+
       }
-
     }
-
 
     if (!board.gameSolved()) {
       throw new IllegalStateException("The game is not yet completely solved")
@@ -460,8 +442,8 @@ object Solver {
     for (i <- 0 until boardSize) {
       checkRow(i)
       checkColumn(i)
-      checkSector(i)
     }
+    checkSectors()
   }
 
 }
