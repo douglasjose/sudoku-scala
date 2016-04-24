@@ -132,6 +132,65 @@ object Solver {
 
   }
 
+  private def listPermutations(groups: List[List[Int]]): List[List[Int]] = {
+
+    def listPermutationsRec(prefix: List[Int], groups: List[List[Int]]): List[List[Int]] = {
+
+      if (groups.isEmpty) {
+        List(prefix)
+      } else {
+        val nextPrefixes = groups.head.map(prefix ++ List(_))
+        nextPrefixes.flatMap(listPermutationsRec(_, groups.tail))
+      }
+    }
+
+    listPermutationsRec(Nil, groups).filter(l => l.distinct.size == l.size)
+
+  }
+
+  private def reducePermutations(permutations: List[List[Int]]): List[List[Int]] = {
+    if (permutations.isEmpty || permutations.head.isEmpty) {
+      Nil
+    } else {
+      permutations.map(_.head).distinct.sorted :: reducePermutations(permutations.map(_.tail))
+    }
+  }
+
+  private def reduceEligibles(values: Values): Unit = {
+    values.foreach(r => {
+      val rowEligibles = r.map(_.toList).toList.filter(_.nonEmpty)
+      val simplifiedRowEligibles = reducePermutations(listPermutations(rowEligibles))
+      if (rowEligibles != simplifiedRowEligibles) {
+        println(s"Row ${values.indexOf(r)} values $rowEligibles simplifies to $simplifiedRowEligibles")
+      }
+    })
+
+    for (i <- 0 until boardSize) {
+      val c = eligibleColumn(i, values)
+      val columnEligibles = c.map(_.toList).toList.filter(_.nonEmpty)
+      val simplifiedColumnEligibles = reducePermutations(listPermutations(columnEligibles))
+      if (columnEligibles != simplifiedColumnEligibles) {
+        println(s"Column $i values $columnEligibles simplifies to $simplifiedColumnEligibles")
+      }
+    }
+
+    // List of pairs ('sector head', 'eligible values in sector')
+    val eligibleSectors: List[((Int, Int), Values)] =
+      sectorHeads.map(h => (h, values.map(_.slice(h._2, h._2 + sectorSize)).slice(h._1, h._1 + sectorSize)))
+
+    eligibleSectors.foreach(s => {
+      val sectorMap = sectorAsMap(s._2)
+      val sectorEligibles = sectorMap.values.map(_.toList).toList.filter(_.nonEmpty)
+      val simplifiedSectorEligibles = reducePermutations(listPermutations(sectorEligibles))
+      if (sectorEligibles != simplifiedSectorEligibles) {
+        println(s"Sector [${s._1}] values $sectorEligibles simplifies to $simplifiedSectorEligibles")
+      }
+    })
+
+  }
+
+
+
   /**
     * Returns a sequence of tuples where only one value is possible in a position, making it a solution
     *
@@ -264,6 +323,7 @@ object Solver {
       if (allSolutions.isEmpty) {
         board.display()
         printEligible(board)
+        reduceEligibles(iterate(board))
         throw new IllegalStateException(s"No more solutions could be found after $iteration iterations")
       }
       allSolutions.foreach { case (i, j, v) =>
