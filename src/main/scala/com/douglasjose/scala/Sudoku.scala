@@ -29,10 +29,7 @@ object Board {
     * E.g., if boardSize = 9, then sectorHeads = List((0,0), (0,3), (0,6), (3,0), (3,3), (3,6), (6,0), (6,3), (6,6))
     */
   val sectorHeads: List[(Int, Int)] = {
-    (for (
-      i <- 0 until sectorSize;
-      j <- 0 until sectorSize
-    ) yield (i * sectorSize, j * sectorSize)).toList
+    (for (i <- 0 until sectorSize; j <- 0 until sectorSize) yield (i * sectorSize, j * sectorSize)).toList
   }
 
 }
@@ -93,7 +90,7 @@ object Solver {
     * @return Matrix of BitSet where each entry represents all values a position can have
     */
   def allValues(): Values = Array.fill(boardSize, boardSize) {
-    mutable.BitSet(1 to boardSize:_*)
+    mutable.BitSet(1 to boardSize: _*)
   }
 
 
@@ -218,7 +215,7 @@ object Solver {
     */
   private def findSolutions(board: Board): Seq[(Int, Int, Int)] = {
     val values = iterate(board)
-    for (i <- 0 until boardSize ; j <- 0 until boardSize ; if values(i)(j).size == 1) yield (i, j, values(i)(j).head)
+    for (i <- 0 until boardSize; j <- 0 until boardSize; if values(i)(j).size == 1) yield (i, j, values(i)(j).head)
   }
 
   /**
@@ -304,8 +301,7 @@ object Solver {
     * @return Map of bitsets
     */
   private def sectorAsMap(sector: Values): Map[(Int, Int), mutable.BitSet] = {
-    val entries = for (i <- sector.indices ; j <- sector(i).indices) yield (i, j) -> sector(i)(j)
-    Map(entries:_*)
+    Map((for (i <- sector.indices; j <- sector(i).indices) yield (i, j) -> sector(i)(j)): _*)
   }
 
   /**
@@ -427,7 +423,7 @@ object Solver {
 
     def checkSectors(): Unit = {
       for (h <- sectorHeads) {
-        val sectorValues = for (r <- h._1 until h._1 + sectorSize ; c <- h._2 until h._2 + sectorSize) yield board(r, c)
+        val sectorValues = for (r <- h._1 until h._1 + sectorSize; c <- h._2 until h._2 + sectorSize) yield board(r, c)
         if (!referenceList.forall(sectorValues.contains)) {
           throw new IllegalStateException(s"Invalid sector $h: $sectorValues")
         }
