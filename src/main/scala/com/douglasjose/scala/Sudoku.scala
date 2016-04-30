@@ -3,6 +3,8 @@ package com.douglasjose.scala
 import scala.collection.mutable
 
 /**
+  * <a href="https://en.wikipedia.org/wiki/Sudoku">Sudoku</a> solver
+  *
   * @author Douglas José (@douglasjose)
   */
 object Sudoku {
@@ -131,6 +133,7 @@ object Solver {
     * @return List of eligible values after invalidation
     */
   def invalidateByPermutations(board: Board): Unit = {
+    println("Invalidating eligibles by permutations")
     val eligibleValues = board.eligibleValues
 
     for (r <- 0 until boardSize) {
@@ -198,8 +201,6 @@ object Solver {
       invalidateInSector(eligibleValues, i, j, k)
     }
 
-    invalidateByPermutations(board)
-
     for (i <- 0 until boardSize; j <- 0 until boardSize; if eligibleValues(i)(j).size == 1)
       yield (i, j, eligibleValues(i)(j).head)
   }
@@ -211,6 +212,7 @@ object Solver {
     * @return Sequence of solutions found using this strategy
     */
   private def findAdvancedSolutions(board: Board): Seq[(Int, Int, Int)] = {
+    println("Searching for advanced solutions")
     val eligibleValues = board.eligibleValues
 
     val eligibleRows: List[(Int, Array[mutable.BitSet])] =
@@ -299,26 +301,43 @@ object Solver {
     var iteration = 0
     while (!board.gameSolved()) {
       iteration = iteration + 1
-      val solutions = findSolutions(board)
-      val advancedSolutions = solutions match {
+      computeSolutions(board) match {
         case Nil =>
-          println(s"Iteration $iteration: Searching for advanced solutions")
-          findAdvancedSolutions(board)
-        case _ => Nil
-      }
-      val allSolutions = solutions ++ advancedSolutions
-      if (allSolutions.isEmpty) {
-        println(board)
-        printEligible(board)
-        throw new IllegalStateException(s"No more solutions could be found after $iteration iterations")
-      }
-      allSolutions.foreach { case (i, j, v) =>
-        println(s"Iteration $iteration: found solution ($i,$j) = $v")
-        board(i, j, v)
+          println(board)
+          printEligible(board)
+          throw new IllegalStateException(s"No more solutions could be found after $iteration iterations")
+        case s =>
+          s.foreach { case (i, j, v) =>
+            println(s"Iteration $iteration: found solution ($i,$j) = $v")
+            board(i, j, v)
+          }
       }
     }
     println(board)
     println(s"Game solved in $iteration iterations.")
+  }
+
+  /**
+    * Applies a chain of solution identification strategies, using the most inexpensive ones first.
+    *
+    * @param board Sudoku boards
+    * @return List of solutions found
+    */
+  def computeSolutions(board: Board): Seq[(Int, Int, Int)] = {
+    findSolutions(board) match {
+      case Nil =>
+        findAdvancedSolutions(board) match {
+          case Nil =>
+            invalidateByPermutations(board)
+            findSolutions(board) match {
+              case Nil =>
+                findAdvancedSolutions(board)
+              case s => s
+            }
+          case s => s
+        }
+      case s => s
+    }
   }
 
   private def printEligible(board: Board): Unit = {
