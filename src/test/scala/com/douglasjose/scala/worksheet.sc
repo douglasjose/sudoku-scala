@@ -34,7 +34,7 @@ val sdk3 = Sudoku.init(List(
 
 val sol3 = Solver.solve(sdk3)
 
-sdk3.display()
+sdk3.toString()
 
 
 //http://www.websudoku.com/?level=4&set_id=7800629503
@@ -69,5 +69,5 @@ val sdk4 = Sudoku.init(List(
 
 val sol4 = Solver.solve(sdk4)
 
-sdk4.display()
+sdk4.toString()
 

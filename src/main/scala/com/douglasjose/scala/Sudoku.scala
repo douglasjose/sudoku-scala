@@ -18,6 +18,9 @@ object Sudoku {
 }
 
 object Board {
+
+  type Values = Array[Array[mutable.BitSet]]
+
   val boardSize = 9
 
   val sectorSize = Math.sqrt(boardSize).toInt
@@ -43,6 +46,10 @@ class Board {
     0
   }
 
+  val eligibleValues: Values = Array.fill(boardSize, boardSize) {
+    mutable.BitSet(1 to boardSize: _*)
+  }
+
   // Sets a value in a specific board position
   def apply(i: Int, j: Int, k: Int): Unit = {
     state(i)(j) = k
@@ -58,7 +65,7 @@ class Board {
     *
     * @return Sequence of row/column/value for known values
     */
-  def values(): Seq[(Int, Int, Int)] = {
+  def knownValues(): Seq[(Int, Int, Int)] = {
     (for (i <- 0 until boardSize; j <- 0 until boardSize) yield (i, j, apply(i, j))).filter(_._3 != 0)
   }
 
@@ -81,39 +88,7 @@ class Board {
 object Solver {
 
   import Board._
-
-  type Values = Array[Array[mutable.BitSet]]
-
-  /**
-    * Returns a 'cube' of all possible values a board position can have
-    *
-    * @return Matrix of BitSet where each entry represents all values a position can have
-    */
-  def allValues(): Values = Array.fill(boardSize, boardSize) {
-    mutable.BitSet(1 to boardSize: _*)
-  }
-
-
-  /**
-    * Calculates the possible values for all positions in the board, based on the already know solutions
-    *
-    * @param board Current game board
-    * @return Values 'cube' containing only the possible values given the board configuration
-    */
-  private def iterate(board: Board): Values = {
-    val eligibleValues = allValues()
-
-    board.values().foreach { case (i, j, k) =>
-      eligibleValues(i)(j).clear()
-      invalidateInRow(eligibleValues, i, k)
-      invalidateInColumn(eligibleValues, j, k)
-      invalidateInSector(eligibleValues, i, j, k)
-    }
-
-    invalidateByPermutations(eligibleValues)
-
-  }
-
+  
   /**
     * Generates all permutations given a list of possible values in each position, returning only permutations where
     * each number appears only once
@@ -152,10 +127,11 @@ object Solver {
     * Invalidates eligible values if no permutations in a row/column/sector allows a number to occur in a particular
     * position
     *
-    * @param eligibleValues List of eligible values in the game
+    * @param board Sudoku board
     * @return List of eligible values after invalidation
     */
-  def invalidateByPermutations(eligibleValues: Values): Values = {
+  def invalidateByPermutations(board: Board): Unit = {
+    val eligibleValues = board.eligibleValues
 
     for (r <- 0 until boardSize) {
       val rowEligibles = eligibleValues(r).zipWithIndex.map(e => (e._2, e._1.toList)).filter(_._2.nonEmpty).toList
@@ -204,7 +180,6 @@ object Solver {
       }
     })
 
-    eligibleValues
   }
 
   /**
@@ -214,8 +189,19 @@ object Solver {
     * @return Sequence of solutions found
     */
   private def findSolutions(board: Board): Seq[(Int, Int, Int)] = {
-    val values = iterate(board)
-    for (i <- 0 until boardSize; j <- 0 until boardSize; if values(i)(j).size == 1) yield (i, j, values(i)(j).head)
+    val eligibleValues = board.eligibleValues
+
+    board.knownValues().foreach { case (i, j, k) =>
+      eligibleValues(i)(j).clear()
+      invalidateInRow(eligibleValues, i, k)
+      invalidateInColumn(eligibleValues, j, k)
+      invalidateInSector(eligibleValues, i, j, k)
+    }
+
+    invalidateByPermutations(board)
+
+    for (i <- 0 until boardSize; j <- 0 until boardSize; if eligibleValues(i)(j).size == 1)
+      yield (i, j, eligibleValues(i)(j).head)
   }
 
   /**
@@ -225,7 +211,7 @@ object Solver {
     * @return Sequence of solutions found using this strategy
     */
   private def findAdvancedSolutions(board: Board): Seq[(Int, Int, Int)] = {
-    val eligibleValues = iterate(board)
+    val eligibleValues = board.eligibleValues
 
     val eligibleRows: List[(Int, Array[mutable.BitSet])] =
       (0 until boardSize).map(r => (r, eligibleValues(r))).toList
@@ -336,7 +322,8 @@ object Solver {
   }
 
   private def printEligible(board: Board): Unit = {
-    val eligibleValues = iterate(board)
+    val eligibleValues = board.eligibleValues
+
 
     val eligibleRows: List[(Int, Array[mutable.BitSet])] =
       (0 until boardSize).map(r => (r, eligibleValues(r))).toList
